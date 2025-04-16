@@ -1,17 +1,4 @@
 '''
-GOAL: balance between clean code, coding style and performance
-    - Efficient logic can be developed to determine if two shapes overlap, intersect, 
-        or if one is contained within the other, using one or two functions. 
-        However, this logic tends to be complex and challenging 
-        to read and follow. Additionally, testing the logic can be difficult, 
-        particularly when it comes to evaluating the internal structure of the function.
-    - Instead, break down the problem into smaller sub-problems, and solve each sub-problem
-        one by one, using simple and easy-to-read functions, combining the proper usage of function
-        parameters to enhance reusability and maintainability, and finally integrating them
-        together to produce the solution to the original problem.
-    - To acheive optimal efficiency and performance, analyses the code structure and flow to ensure the correct
-        order of execution and avoid unnecessary calculations.
-
 Process: 
     Pick a random polygon shape and a color
     Stretch the chosen polygon
@@ -303,9 +290,6 @@ def is_shape_overlapped_any(shape:turtle.Turtle, shapes:list[turtle.Turtle]) -> 
     shape_info_dict[shape] = (current_aabb, current_vertices)
     return False
 
-############################################
-################## template ################
-############################################
 
 def create_shape(shape:turtle.Turtle, color:str, sz_x:int = 1, sz_y:int = 1) -> turtle.Turtle:
     '''
