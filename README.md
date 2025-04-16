@@ -1,2 +1,3 @@
 # Courses-project
-The project of course in CUHKSZ
+The project of courses in CUHKSZ
+Find them in different braches
