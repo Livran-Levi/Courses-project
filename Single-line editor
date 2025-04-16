@@ -1,0 +1,269 @@
+import re
+
+'''
+Global variables to store editor content, cursor position, and command history
+'''
+CONTENT = ""
+CURSOR_POSITION = 0
+CURSOR_ON = False
+COMMAND_HISTORY = []
+
+'''
+ANSI escape codes with Green background
+'''
+CURSOR_BG = "\033[42m" 
+RESET = "\033[0m"
+
+def show_help() -> None:
+    '''
+    this function is to show the help info
+    '''
+    print("? - display the help info",
+        ". - toggle row cursor on or off",
+        "h - move cursor left",
+        "l - move cursor right",
+        "^ - move cursor to beginning of the line",
+        "$ - move cursor to end of the line",
+        "w - mive cursor to the beginning of the next word", 
+        "b - move cursor to beginning of previous word",
+        "i - insert <text> before cursor",
+        "a - append <text> after cursor",
+        "x - delete character at cursor",
+        "dw - delete word and trailing spaces at cursor",
+        "u - undo previous command",
+        "r - repeat last command",
+        "s - show content",
+        "q - quit program",
+        sep='\n')
+
+def check_cursor_pos() -> None:
+    '''
+    this function to check if the cursor are in the range of text
+    if not, set the cursor to end of the text
+    '''
+    global CURSOR_POSITION
+    if CURSOR_POSITION >= len(CONTENT):
+        CURSOR_POSITION = len(CONTENT) - 1
+    if CURSOR_POSITION < 0:
+        CURSOR_POSITION = 0
+
+def show_content() -> None:
+    '''
+    Function to display the content with the cursor highlighted
+    If cursor is on, add cursor to its correct position
+    '''
+    if CONTENT:
+        if CURSOR_ON:
+            display = CONTENT[:CURSOR_POSITION] + CURSOR_BG + CONTENT[CURSOR_POSITION:CURSOR_POSITION+1] + RESET + CONTENT[CURSOR_POSITION+1:]
+        else:
+            display = CONTENT
+        print(display)
+
+def cursor_toggle() -> None:
+    """
+    Function to toggle the cursor state on or off.
+    """
+    global CURSOR_ON
+    COMMAND_HISTORY.append((".", CURSOR_POSITION))
+    CURSOR_ON = not CURSOR_ON
+    show_content()
+
+def move_left() -> None:
+    '''
+    Function to move the cursor left
+    '''
+    global CURSOR_POSITION
+    COMMAND_HISTORY.append(("h", CURSOR_POSITION))
+    if CURSOR_POSITION > 0:
+        CURSOR_POSITION -= 1
+    show_content()
+
+def move_right() -> None:
+    '''
+    Function to move the cursor right
+    '''
+    global CURSOR_POSITION
+    COMMAND_HISTORY.append(("l", CURSOR_POSITION))
+    if CURSOR_POSITION < len(CONTENT) - 1:
+        CURSOR_POSITION += 1
+    show_content()
+
+def move_to_start() -> None:
+    '''
+    Function to move the cursor to the start of the line
+    '''
+    global CURSOR_POSITION
+    COMMAND_HISTORY.append(("^", CURSOR_POSITION))
+    CURSOR_POSITION = 0
+    show_content()
+
+def move_to_end() -> None:
+    '''
+    Function to move the cursor to the end of the line
+    '''
+    global CURSOR_POSITION
+    COMMAND_HISTORY.append(("$", CURSOR_POSITION))
+    CURSOR_POSITION = len(CONTENT) - 1
+    show_content()
+
+def move_to_next_word() -> None:
+    '''
+    Function to move the cursor to the beginning of the next word
+    '''
+    global CURSOR_POSITION
+    COMMAND_HISTORY.append(("w", CURSOR_POSITION))
+    pattern = re.compile(r'(?<=\s)(?=\S)')
+    match = pattern.search(CONTENT[CURSOR_POSITION:])
+    if match:
+        CURSOR_POSITION += match.start()
+    show_content()
+
+def move_to_prev_word() -> None:
+    '''
+    Function to move the cursor to the beginning of the previous word
+    '''
+    global CURSOR_POSITION
+    COMMAND_HISTORY.append(("b", CURSOR_POSITION))
+    match = re.search(r'\S+\s*$', CONTENT[:CURSOR_POSITION])
+    if match:
+        CURSOR_POSITION = match.start()
+    show_content()
+
+def insert_text(text:str) -> None:
+    '''
+    Function to insert text at the current cursor position
+    '''
+    global CONTENT, CURSOR_POSITION
+    CONTENT = CONTENT[:CURSOR_POSITION] + text[1:] + CONTENT[CURSOR_POSITION:]
+    COMMAND_HISTORY.append((text, CURSOR_POSITION))
+    show_content()
+
+def append_text(text:str) -> None:
+    '''
+    Function to append text after the cursor position
+    '''
+    global CONTENT, CURSOR_POSITION
+    CONTENT = CONTENT[:CURSOR_POSITION + 1] + text[1:] + CONTENT[CURSOR_POSITION + 1:]
+    COMMAND_HISTORY.append((text, CURSOR_POSITION))
+    CURSOR_POSITION += len(text) - 1
+    check_cursor_pos()
+    show_content()
+
+def delete_char() -> None:
+    '''
+    Function to delete the character at the cursor position
+    '''
+    global CONTENT, CURSOR_POSITION
+    if CONTENT:
+        deleted_char = CONTENT[CURSOR_POSITION]
+        CONTENT = CONTENT[:CURSOR_POSITION] + CONTENT[CURSOR_POSITION+1:]
+        COMMAND_HISTORY.append((f"x{deleted_char}", CURSOR_POSITION))
+        check_cursor_pos()
+        show_content()
+
+def delete_word() -> None:
+    '''
+    Function to delete the word from the cursor position
+    '''
+    global CONTENT, CURSOR_POSITION
+    match = re.search(r'\S*\s*', CONTENT[CURSOR_POSITION:])
+    deleted_word = match.group()
+    CONTENT = CONTENT[:CURSOR_POSITION] + CONTENT[CURSOR_POSITION + len(deleted_word):]
+    COMMAND_HISTORY.append((f"dw{deleted_word}", CURSOR_POSITION))
+    check_cursor_pos()
+    show_content()
+    
+def undo_command() -> None:
+    '''
+    Function to undo the last command
+    '''
+    global CONTENT, CURSOR_POSITION
+    if COMMAND_HISTORY:
+        last_cmd, curson_pos= COMMAND_HISTORY.pop()
+
+        if last_cmd.startswith("i"):
+            text_length = len(last_cmd[1:])
+            CONTENT = CONTENT[:CURSOR_POSITION] + CONTENT[CURSOR_POSITION + text_length:]
+
+        elif last_cmd.startswith("a"):
+            text_length = len(last_cmd[1:])
+            CONTENT = CONTENT[:CURSOR_POSITION - text_length] + CONTENT[CURSOR_POSITION:]
+
+        elif last_cmd.startswith("dw"):
+            deleted_word = last_cmd[2:]
+            CONTENT = CONTENT[:CURSOR_POSITION] + deleted_word + CONTENT[CURSOR_POSITION:]
+
+        elif last_cmd.startswith("x"):
+            deleted_char = last_cmd[1:]
+            CONTENT = CONTENT[:CURSOR_POSITION] + deleted_char + CONTENT[CURSOR_POSITION:]
+        
+        elif last_cmd == '.':
+            CURSOR_ON = not CURSOR_ON
+
+        CURSOR_POSITION = curson_pos
+        show_content()
+     
+def repeat_command() -> None:
+    '''
+    Function to repeat the last command
+    '''
+    if COMMAND_HISTORY:
+        last_cmd = COMMAND_HISTORY[-1][0]
+        if last_cmd.startswith('dw'):
+            delete_word()
+        elif last_cmd.startswith('x'):
+            delete_char()
+        else:
+            execute_cmd(last_cmd)
+
+def quit_editor() -> None:
+    '''
+    Function to quit the editor
+    '''
+    exit()
+
+def execute_cmd(cmd:str) -> None:
+    '''
+    Function to execute the command
+    '''
+    if cmd == "?":
+        show_help()
+    elif cmd == ".":
+        cursor_toggle()
+    elif cmd == "h":
+        move_left()
+    elif cmd == "l":
+        move_right()
+    elif cmd == "^":
+        move_to_start()
+    elif cmd == "$":
+        move_to_end()
+    elif cmd == "w":
+        move_to_next_word()
+    elif cmd == "b":
+        move_to_prev_word()
+    elif cmd.startswith("i"):
+        insert_text(cmd)
+    elif cmd.startswith("a"):
+        append_text(cmd)
+    elif cmd == "x":
+        delete_char()
+    elif cmd == "dw":
+        delete_word()
+    elif cmd == "u":
+        undo_command()
+    elif cmd == "r":
+        repeat_command()
+    elif cmd == "s":
+        show_content()
+    elif cmd == "q":
+        quit_editor()
+
+def main() -> None:
+    global CURSOR_POSITION
+    while True:
+        cmd = input(">")
+        execute_cmd(cmd)
+
+if __name__ == "__main__":
+    main()
